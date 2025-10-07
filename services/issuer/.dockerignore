@@ -1,0 +1,4 @@
+node_modules
+dist
+issuer.db
+*.log
