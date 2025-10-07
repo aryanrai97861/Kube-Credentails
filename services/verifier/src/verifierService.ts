@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 
-const DB_PATH = process.env.DB_PATH || 'verifier.db';
+const DB_PATH = process.env.DB_PATH || '../../shared/credentials.db';
 
 export class VerifierService {
   private db: Database.Database;

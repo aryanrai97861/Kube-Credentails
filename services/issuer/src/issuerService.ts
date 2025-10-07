@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { v4 as uuidv4 } from 'uuid';
 
-const DB_PATH = process.env.DB_PATH || 'issuer.db';
+const DB_PATH = process.env.DB_PATH || '../../shared/credentials.db';
 
 export type Credential = any;
 

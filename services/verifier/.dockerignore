@@ -1,4 +1,5 @@
 node_modules
 dist
 verifier.db
+../shared/credentials.db
 *.log
