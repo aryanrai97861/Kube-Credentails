@@ -2,6 +2,12 @@ import Database from 'better-sqlite3';
 
 const DB_PATH = process.env.DB_PATH || '../../shared/credentials.db';
 
+interface IssuedCredentialRow {
+  id: string;
+  issued_at: number;
+  worker: string;
+}
+
 export class VerifierService {
   private db: Database.Database;
 
@@ -22,7 +28,7 @@ export class VerifierService {
 
   verify(credential: any) {
     const json = JSON.stringify(credential);
-    const row = this.db.prepare('SELECT id,issued_at,worker FROM issued WHERE credential_json = ?').get(json);
+    const row = this.db.prepare('SELECT id,issued_at,worker FROM issued WHERE credential_json = ?').get(json) as IssuedCredentialRow | undefined;
     if (row) {
       return { valid: true, id: row.id, worker: row.worker, issued_at: row.issued_at };
     }

@@ -6,6 +6,12 @@ const DB_PATH = process.env.DB_PATH || '../../shared/credentials.db';
 
 export type Credential = any;
 
+interface IssuedCredentialRow {
+  id: string;
+  issued_at: number;
+  worker: string;
+}
+
 export class IssuerService {
   private db: Database.Database;
 
@@ -27,7 +33,7 @@ export class IssuerService {
   issue(credential: Credential) {
     // idempotency key: hash or provided id. We'll use JSON string as key.
     const json = JSON.stringify(credential);
-    const existing = this.db.prepare('SELECT id,issued_at,worker FROM issued WHERE credential_json = ?').get(json);
+    const existing = this.db.prepare('SELECT id,issued_at,worker FROM issued WHERE credential_json = ?').get(json) as IssuedCredentialRow | undefined;
     if (existing) {
       return { message: 'credential already issued', id: existing.id, worker: existing.worker };
     }
