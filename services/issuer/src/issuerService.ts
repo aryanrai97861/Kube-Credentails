@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { v4 as uuidv4 } from 'uuid';
+import * as os from 'os';
 
 const DB_PATH = process.env.DB_PATH || '../../shared/credentials.db';
 
@@ -33,7 +34,7 @@ export class IssuerService {
 
     const id = uuidv4();
     const issuedAt = Date.now();
-    const worker = process.env.HOSTNAME || process.env.POD_NAME || 'worker-1';
+    const worker = process.env.HOSTNAME || process.env.POD_NAME || process.env.USERNAME || os.hostname() || 'worker-1';
     this.db.prepare('INSERT INTO issued (id, credential_json, issued_at, worker) VALUES (?,?,?,?)')
       .run(id, json, issuedAt, worker);
 
