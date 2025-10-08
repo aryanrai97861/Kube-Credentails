@@ -105,17 +105,44 @@ npm run dev  # Runs on http://localhost:5173
 
 ### Docker Deployment
 
+**Option 1: Docker Compose (Recommended)**
 ```bash
+# Start all services with shared database
+docker-compose up --build -d
+
+# Or use the helper script
+./docker-start.sh          # Linux/Mac
+# or
+docker-start.bat           # Windows
+```
+
+**Option 2: Individual Containers**
+```bash
+# Create shared volume for database
+docker volume create kube-credentials-db
+
 # Build and run issuer
 cd services/issuer
-docker build -t issuer .
-docker run -p 4001:4001 issuer
+docker build -t kube-credential-issuer .
+docker run -d -p 4001:4001 -v kube-credentials-db:/app/shared \
+  -e POD_NAME=issuer-docker kube-credential-issuer
 
 # Build and run verifier
-cd services/verifier
-docker build -t verifier .
-docker run -p 4002:4002 verifier
+cd services/verifier  
+docker build -t kube-credential-verifier .
+docker run -d -p 4002:4002 -v kube-credentials-db:/app/shared \
+  -e POD_NAME=verifier-docker kube-credential-verifier
+
+# Build and run frontend
+cd frontend
+docker build -t kube-credential-frontend .
+docker run -d -p 3000:80 kube-credential-frontend
 ```
+
+**Access Points:**
+- Frontend: http://localhost:3000
+- Issuer API: http://localhost:4001
+- Verifier API: http://localhost:4002
 
 ### Kubernetes Deployment
 
@@ -145,6 +172,8 @@ chmod +x deploy.sh
 ✅ **Containerization**: Docker images ready for deployment  
 ✅ **Kubernetes Ready**: Complete K8s manifests with scaling support  
 ✅ **React Frontend**: Clean UI for testing both services  
+✅ **Docker Compose**: Full orchestration with shared database volume  
+✅ **Production Ready**: Optimized Docker builds with health checks  
 
 ## Testing
 

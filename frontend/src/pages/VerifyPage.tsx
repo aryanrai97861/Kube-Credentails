@@ -13,7 +13,8 @@ export default function VerifyPage() {
 
     try {
       const credential = JSON.parse(credentialText)
-      const response = await axios.post('http://localhost:4002/verify', credential)
+      const apiUrl = import.meta.env.VITE_VERIFIER_API_URL || 'http://localhost:4002'
+      const response = await axios.post(`${apiUrl}/verify`, credential)
       setResult({ success: true, data: response.data })
     } catch (error: any) {
       setResult({ 

@@ -13,7 +13,8 @@ export default function IssuePage() {
 
     try {
       const credential = JSON.parse(credentialText)
-      const response = await axios.post('http://localhost:4001/issue', credential)
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001'
+      const response = await axios.post(`${apiUrl}/issue`, credential)
       setResult({ success: true, data: response.data })
     } catch (error: any) {
       setResult({ 
