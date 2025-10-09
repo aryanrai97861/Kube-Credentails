@@ -1,0 +1,22 @@
+[
+  {
+    "ParameterKey": "ProjectName",
+    "ParameterValue": "kube-credentials"
+  },
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "production"
+  },
+  {
+    "ParameterKey": "IssuerImageURI",
+    "ParameterValue": "095232028853.dkr.ecr.eu-north-1.amazonaws.com/kube-credentials-issuer:latest"
+  },
+  {
+    "ParameterKey": "VerifierImageURI",
+    "ParameterValue": "095232028853.dkr.ecr.eu-north-1.amazonaws.com/kube-credentials-verifier:latest"
+  },
+  {
+    "ParameterKey": "FrontendImageURI",
+    "ParameterValue": "095232028853.dkr.ecr.eu-north-1.amazonaws.com/kube-credentials-frontend:latest"
+  }
+]
