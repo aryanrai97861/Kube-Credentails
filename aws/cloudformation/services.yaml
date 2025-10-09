@@ -1,0 +1,308 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Kube Credentials - ECS Services and Task Definitions'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: kube-credentials
+    Description: Name of the project
+  
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name
+
+  IssuerImageURI:
+    Type: String
+    Description: URI of the Issuer service Docker image in ECR
+    
+  VerifierImageURI:
+    Type: String
+    Description: URI of the Verifier service Docker image in ECR
+    
+  FrontendImageURI:
+    Type: String
+    Description: URI of the Frontend Docker image in ECR
+
+Resources:
+  # ===================== CLOUDWATCH LOG GROUPS =====================
+  IssuerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${ProjectName}-issuer
+      RetentionInDays: 7
+
+  VerifierLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${ProjectName}-verifier
+      RetentionInDays: 7
+
+  FrontendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${ProjectName}-frontend
+      RetentionInDays: 7
+
+  # ===================== ECS TASK DEFINITIONS =====================
+  IssuerTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${ProjectName}-issuer
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: 
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-ExecutionRole-ARN
+      TaskRoleArn:
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-TaskRole-ARN
+      ContainerDefinitions:
+        - Name: issuer
+          Image: !Ref IssuerImageURI
+          Essential: true
+          PortMappings:
+            - ContainerPort: 4001
+              Protocol: tcp
+          Environment:
+            - Name: PORT
+              Value: "4001"
+            - Name: DB_PATH
+              Value: "/app/data/issuer.db"
+            - Name: NODE_ENV
+              Value: !Ref Environment
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref IssuerLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  VerifierTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${ProjectName}-verifier
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: 
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-ExecutionRole-ARN
+      TaskRoleArn:
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-TaskRole-ARN
+      ContainerDefinitions:
+        - Name: verifier
+          Image: !Ref VerifierImageURI
+          Essential: true
+          PortMappings:
+            - ContainerPort: 4002
+              Protocol: tcp
+          Environment:
+            - Name: PORT
+              Value: "4002"
+            - Name: DB_PATH
+              Value: "/app/data/verifier.db"
+            - Name: ISSUER_SERVICE_URL
+              Value: !Sub 
+                - "http://${LoadBalancerDNS}/api"
+                - LoadBalancerDNS: 
+                    Fn::ImportValue: !Sub ${ProjectName}-LoadBalancer-DNS
+            - Name: NODE_ENV
+              Value: !Ref Environment
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref VerifierLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  FrontendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${ProjectName}-frontend
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: 
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-ExecutionRole-ARN
+      TaskRoleArn:
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-TaskRole-ARN
+      ContainerDefinitions:
+        - Name: frontend
+          Image: !Ref FrontendImageURI
+          Essential: true
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+          Environment:
+            - Name: NODE_ENV
+              Value: !Ref Environment
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref FrontendLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  # ===================== ECS SERVICES =====================
+  IssuerService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${ProjectName}-issuer
+      Cluster: 
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-Cluster
+      TaskDefinition: !Ref IssuerTaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Split 
+            - ","
+            - Fn::ImportValue: !Sub ${ProjectName}-Public-Subnets
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${ProjectName}-ECS-SecurityGroup-ID
+      LoadBalancers:
+        - ContainerName: issuer
+          ContainerPort: 4001
+          TargetGroupArn:
+            Fn::ImportValue: !Sub ${ProjectName}-Issuer-TG-ARN
+      HealthCheckGracePeriodSeconds: 60
+
+  VerifierService:
+    Type: AWS::ECS::Service
+    DependsOn: IssuerService
+    Properties:
+      ServiceName: !Sub ${ProjectName}-verifier
+      Cluster: 
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-Cluster
+      TaskDefinition: !Ref VerifierTaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Split 
+            - ","
+            - Fn::ImportValue: !Sub ${ProjectName}-Public-Subnets
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${ProjectName}-ECS-SecurityGroup-ID
+      LoadBalancers:
+        - ContainerName: verifier
+          ContainerPort: 4002
+          TargetGroupArn:
+            Fn::ImportValue: !Sub ${ProjectName}-Verifier-TG-ARN
+      HealthCheckGracePeriodSeconds: 60
+
+  FrontendService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${ProjectName}-frontend
+      Cluster: 
+        Fn::ImportValue: !Sub ${ProjectName}-ECS-Cluster
+      TaskDefinition: !Ref FrontendTaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: 2
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Split 
+            - ","
+            - Fn::ImportValue: !Sub ${ProjectName}-Public-Subnets
+          SecurityGroups:
+            - Fn::ImportValue: !Sub ${ProjectName}-ECS-SecurityGroup-ID
+      LoadBalancers:
+        - ContainerName: frontend
+          ContainerPort: 80
+          TargetGroupArn:
+            Fn::ImportValue: !Sub ${ProjectName}-Frontend-TG-ARN
+      HealthCheckGracePeriodSeconds: 60
+
+  # ===================== AUTO SCALING =====================
+  IssuerAutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 3
+      MinCapacity: 1
+      ResourceId: !Sub service/${ProjectName}-cluster/${ProjectName}-issuer
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  VerifierAutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 3
+      MinCapacity: 1
+      ResourceId: !Sub service/${ProjectName}-cluster/${ProjectName}-verifier
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  FrontendAutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 5
+      MinCapacity: 2
+      ResourceId: !Sub service/${ProjectName}-cluster/${ProjectName}-frontend
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  # Auto Scaling Policies
+  IssuerAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${ProjectName}-issuer-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref IssuerAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 70.0
+
+  VerifierAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${ProjectName}-verifier-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref VerifierAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 70.0
+
+  FrontendAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${ProjectName}-frontend-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref FrontendAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 70.0
+
+Outputs:
+  IssuerServiceArn:
+    Description: Issuer Service ARN
+    Value: !Ref IssuerService
+    Export:
+      Name: !Sub ${ProjectName}-Issuer-Service-ARN
+
+  VerifierServiceArn:
+    Description: Verifier Service ARN
+    Value: !Ref VerifierService
+    Export:
+      Name: !Sub ${ProjectName}-Verifier-Service-ARN
+
+  FrontendServiceArn:
+    Description: Frontend Service ARN
+    Value: !Ref FrontendService
+    Export:
+      Name: !Sub ${ProjectName}-Frontend-Service-ARN
