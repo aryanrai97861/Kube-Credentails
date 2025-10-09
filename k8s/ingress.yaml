@@ -1,0 +1,77 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kube-credentials-ingress
+  labels:
+    app: kube-credentials
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: kube-credentials.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+      - path: /api/issue
+        pathType: Prefix
+        backend:
+          service:
+            name: issuer-service
+            port:
+              number: 80
+      - path: /api/verify
+        pathType: Prefix
+        backend:
+          service:
+            name: verifier-service
+            port:
+              number: 80
+---
+# Alternative ingress for cloud providers without custom domains
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kube-credentials-ingress-paths
+  labels:
+    app: kube-credentials
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /kube-credentials(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+      - path: /kube-credentials/api/issue(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: issuer-service
+            port:
+              number: 80
+      - path: /kube-credentials/api/verify(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: verifier-service
+            port:
+              number: 80

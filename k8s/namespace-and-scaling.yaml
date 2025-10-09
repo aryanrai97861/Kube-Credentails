@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-credentials
+  labels:
+    name: kube-credentials
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: issuer-pdb
+  namespace: kube-credentials
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: issuer
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verifier-pdb
+  namespace: kube-credentials
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: verifier
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: issuer-hpa
+  namespace: kube-credentials
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: issuer-deployment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: verifier-hpa
+  namespace: kube-credentials
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: verifier-deployment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource  
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
