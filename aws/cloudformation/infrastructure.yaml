@@ -167,7 +167,7 @@ Resources:
   IssuerTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub ${ProjectName}-issuer-tg
+      Name: !Sub ${ProjectName}-issuer-tg-v2
       Port: 3001
       Protocol: HTTP
       VpcId: !Ref VPC

@@ -100,7 +100,7 @@ Resources:
             - Name: PORT
               Value: "3001"
             - Name: DB_PATH
-              Value: "/app/data/issuer.db"
+              Value: "/app/issuer.db"
             - Name: NODE_ENV
               Value: !Ref Environment
           LogConfiguration:
@@ -132,9 +132,9 @@ Resources:
             - Name: PORT
               Value: "4002"
             - Name: DB_PATH
-              Value: "/app/data/verifier.db"
+              Value: "/app/verifier.db"
             - Name: ISSUER_SERVICE_URL
-              Value: "http://localhost:3001"
+              Value: "http://kube-credentials-alb-904715878.us-east-1.elb.amazonaws.com:3001"
             - Name: NODE_ENV
               Value: !Ref Environment
           LogConfiguration:
@@ -182,6 +182,11 @@ Resources:
       TaskDefinition: !Ref IssuerTaskDefinition
       DesiredCount: 1
       LaunchType: FARGATE
+      LoadBalancers:
+        - TargetGroupArn: !ImportValue
+            Fn::Sub: ${ProjectName}-Issuer-TG-ARN
+          ContainerName: issuer
+          ContainerPort: 3001
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -202,6 +207,11 @@ Resources:
       TaskDefinition: !Ref VerifierTaskDefinition
       DesiredCount: 1
       LaunchType: FARGATE
+      LoadBalancers:
+        - TargetGroupArn: !ImportValue
+            Fn::Sub: ${ProjectName}-Verifier-TG-ARN
+          ContainerName: verifier
+          ContainerPort: 4002
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -222,6 +232,11 @@ Resources:
       TaskDefinition: !Ref FrontendTaskDefinition
       DesiredCount: 1
       LaunchType: FARGATE
+      LoadBalancers:
+        - TargetGroupArn: !ImportValue
+            Fn::Sub: ${ProjectName}-Frontend-TG-ARN
+          ContainerName: frontend
+          ContainerPort: 80
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -237,20 +252,14 @@ Outputs:
   IssuerServiceArn:
     Description: ARN of the Issuer ECS Service
     Value: !Ref IssuerService
-    Export:
-      Name: !Sub ${ProjectName}-Issuer-Service-ARN
 
   VerifierServiceArn:
     Description: ARN of the Verifier ECS Service
     Value: !Ref VerifierService
-    Export:
-      Name: !Sub ${ProjectName}-Verifier-Service-ARN
 
   FrontendServiceArn:
     Description: ARN of the Frontend ECS Service
     Value: !Ref FrontendService
-    Export:
-      Name: !Sub ${ProjectName}-Frontend-Service-ARN
 
 
 
