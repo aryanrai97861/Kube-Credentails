@@ -1,21 +1,20 @@
+version: '3.8'
+
 services:
   issuer:
     build:
       context: ./services/issuer
       dockerfile: Dockerfile
-    container_name: kube-credential-issuer-prod
+    container_name: kube-credentials-issuer
     ports:
       - "4001:4001"
     environment:
       - NODE_ENV=production
       - PORT=4001
-      - DB_PATH=/app/shared/credentials.db
-      - POD_NAME=issuer-prod
-    volumes:
-      - shared_db:/app/shared
+      - DB_PATH=/app/issuer.db
     networks:
       - kube-credentials-network
-    restart: always
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4001/health"]
       timeout: 5s
@@ -26,19 +25,17 @@ services:
     build:
       context: ./services/verifier
       dockerfile: Dockerfile
-    container_name: kube-credential-verifier-prod
+    container_name: kube-credentials-verifier
     ports:
       - "4002:4002"
     environment:
       - NODE_ENV=production
       - PORT=4002
-      - DB_PATH=/app/shared/credentials.db
-      - POD_NAME=verifier-prod
-    volumes:
-      - shared_db:/app/shared
+      - DB_PATH=/app/verifier.db
+      - ISSUER_SERVICE_URL=http://issuer:4001
     networks:
       - kube-credentials-network
-    restart: always
+    restart: unless-stopped
     depends_on:
       - issuer
     healthcheck:
@@ -50,20 +47,19 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: kube-credential-frontend-prod
+      dockerfile: Dockerfile.local
+    container_name: kube-credentials-frontend
     ports:
-      - "80:80"
+      - "3000:80"
+    environment:
+      - ISSUER_URL=http://issuer:4001
+      - VERIFIER_URL=http://verifier:4002
     networks:
       - kube-credentials-network
-    restart: always
+    restart: unless-stopped
     depends_on:
       - issuer
       - verifier
-
-volumes:
-  shared_db:
-    driver: local
 
 networks:
   kube-credentials-network:
