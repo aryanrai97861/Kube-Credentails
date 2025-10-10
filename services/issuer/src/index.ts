@@ -22,6 +22,16 @@ app.post('/issue', async (req, res) => {
   }
 });
 
+// Endpoint for verifier to fetch all credentials
+app.get('/credentials', (req, res) => {
+  try {
+    const credentials = issuer.getAllCredentials();
+    res.json({ credentials });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(port, () => {

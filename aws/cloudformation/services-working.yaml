@@ -134,7 +134,7 @@ Resources:
             - Name: DB_PATH
               Value: "/app/verifier.db"
             - Name: ISSUER_SERVICE_URL
-              Value: "http://kube-credentials-alb-904715878.us-east-1.elb.amazonaws.com:3001"
+              Value: "http://kube-credentials-alb-904715878.us-east-1.elb.amazonaws.com"
             - Name: NODE_ENV
               Value: !Ref Environment
           LogConfiguration:

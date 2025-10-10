@@ -47,6 +47,22 @@ export class IssuerService {
     return { message: `credential issued by ${worker}`, id, worker };
   }
 
+  // Get all issued credentials (for sync with verifier)
+  getAllCredentials() {
+    const rows = this.db.prepare('SELECT id, credential_json, issued_at, worker FROM issued').all() as Array<{
+      id: string;
+      credential_json: string;
+      issued_at: number;
+      worker: string;
+    }>;
+    return rows.map(row => ({
+      id: row.id,
+      credential: JSON.parse(row.credential_json),
+      issued_at: row.issued_at,
+      worker: row.worker
+    }));
+  }
+
   // helper for tests
   clearAll() {
     this.db.prepare('DELETE FROM issued').run();

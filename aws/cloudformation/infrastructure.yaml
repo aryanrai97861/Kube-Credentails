@@ -214,7 +214,7 @@ Resources:
           TargetGroupArn: !Ref IssuerTargetGroup
       Conditions:
         - Field: path-pattern
-          Values: ['/issue*']
+          Values: ['/issue*', '/credentials*']
       ListenerArn: !Ref LoadBalancerListener
       Priority: 100
 
@@ -226,7 +226,7 @@ Resources:
           TargetGroupArn: !Ref VerifierTargetGroup
       Conditions:
         - Field: path-pattern
-          Values: ['/verify*']
+          Values: ['/verify*', '/sync*']
       ListenerArn: !Ref LoadBalancerListener
       Priority: 200
 
