@@ -199,16 +199,3 @@ This system is designed for deployment on free-tier cloud platforms:
 
 See [k8s/README.md](./k8s/README.md) for detailed cloud deployment instructions.
 
-## Assignment Compliance
-
-✅ Node.js (TypeScript) APIs  
-✅ Two microservices (Issuer + Verifier)  
-✅ Docker containerization  
-✅ Independent persistence layers  
-✅ React (TypeScript) frontend with two pages  
-✅ Worker ID in responses  
-✅ JSON credential handling  
-✅ Proper error handling  
-✅ Unit tests included  
-✅ Kubernetes YAML manifests  
-✅ Cloud deployment ready
